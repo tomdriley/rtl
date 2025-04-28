@@ -27,13 +27,20 @@ docker pull "$IMAGE"
 echo "Testing Verilator version..."
 docker run --rm --entrypoint verilator "$IMAGE" --version
 
-# 5) Build the GTK wave docker image
-echo "Building GTK wave Docker image..."
-docker build -t gtk-wave -f Dockerfile.gtk-wave .
-if [ $? -ne 0 ]; then
-  echo "Error: Failed to build GTK wave Docker image." >&2
-  exit 1
+# 5) Build the GTK wave docker image if it doesn't exist
+echo "Checking for existing GTK wave Docker image..."
+
+if ! docker image inspect gtk-wave:latest > /dev/null 2>&1; then
+  echo "Building GTK wave Docker image..."
+  docker build -t gtk-wave -f Dockerfile.gtk-wave .
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to build GTK wave Docker image." >&2
+    exit 1
+  fi
+else
+  echo "GTK wave Docker image already exists. Skipping build."
 fi
+
 
 # 6) Verify GTK wave is accessible
 echo "Testing GTK wave version..."
