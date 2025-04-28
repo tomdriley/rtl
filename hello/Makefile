@@ -14,10 +14,18 @@ VERILATOR_DOCKER := docker run --rm -ti \
 	--user $(shell id -u):$(shell id -g) \
 	$(IMAGE)
 
-.PHONY: build run clean
+.PHONY: build run clean rebuild
+
+# Clean generated files
+clean:
+	rm -rf obj_dir .cache
 
 # 'build' is simply an alias that ensures the binary exists
 build: obj_dir/run_sim
+
+rebuild:
+	$(MAKE) clean
+	$(MAKE) build
 
 # Generate the Verilator binary only if $(FILE_LIST) changed or missing
 obj_dir/run_sim: $(FILE_LIST)
@@ -27,6 +35,4 @@ obj_dir/run_sim: $(FILE_LIST)
 run: obj_dir/run_sim
 	obj_dir/run_sim
 
-# Clean generated files
-clean:
-	rm -rf obj_dir .cache
+
