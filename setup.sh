@@ -19,7 +19,7 @@ if ! docker info &> /dev/null; then
 fi
 
 # 3) Pull the latest Verilator Docker image
-IMAGE="verilator/verilator:latest"
+IMAGE="verilator/verilator:v5.036"
 echo "Pulling Docker image $IMAGE..."
 docker pull "$IMAGE"
 

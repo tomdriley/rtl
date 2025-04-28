@@ -4,7 +4,7 @@ FILE_LIST := hello.v
 VERILATOR_BUILD_ARGS := --main --timing --build --exe -Wall -j 0 -o run_sim
 
 # Docker image containing Verilator
-IMAGE := verilator/verilator:latest
+IMAGE := verilator/verilator:v5.036
 
 # Common docker run flags
 VERILATOR_DOCKER := docker run --rm -ti \

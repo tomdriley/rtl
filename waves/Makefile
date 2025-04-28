@@ -5,7 +5,7 @@ WAVE_FILE := waves.vcd
 VERILATOR_BUILD_ARGS := --main --timing --build --exe -Wall -j 0 -o run_sim --trace
 
 # Docker image containing Verilator
-VERILATOR_IMAGE := verilator/verilator:latest
+VERILATOR_IMAGE := verilator/verilator:v5.036
 VERILATOR_DOCKER := docker run --rm -ti \
 	-v "$(PWD)":/work \
 	-e HOME=/work \
