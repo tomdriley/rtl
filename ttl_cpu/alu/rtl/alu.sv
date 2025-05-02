@@ -59,7 +59,7 @@ module alu#(
     assign a_and_b                      = op_a & op_b;                                                          // 8-bit AND (2x 74LS08)
     assign a_xor_b                      = op_a ^ op_b;                                                          // 8-bit XOR (2x 74LS86)
     assign b_inverted                   = ~op_b;                                                                // 8-bit inverter (6/6 + 2/6 74LS04)
-    assign {carry_flag, arith_result}   = op_a + b_or_invert_b + {{(DATA_WIDTH){1'b0}}, sub_or_logic_select};   // 8-bit adder with carry (2x 74LS83)
+    assign {carry_flag, arith_result}   = op_a + b_or_invert_b + {{(DATA_WIDTH){1'b0}}, sub_or_logic_select};   // 8-bit full-adder with carry (2x 74LS283)
     assign b_or_invert_b                = sub_or_logic_select ? b_inverted : op_b;                              // 2:1 byte mux (2x 74LS157)
     assign or_xor_muxed                 = sub_or_logic_select ? a_xor_b : a_or_b;                               // 2:1 byte mux (2x 74LS157)
     assign b_xor_sub                    = b_sign ^ sub_or_logic_select;                                         // 1-bit XOR (1/4 74LS86)
