@@ -45,7 +45,6 @@ module alu#(
     wire                    a_xor_b_xor_sub;
     wire                    not_a_xor_b_xor_sub;
     wire                    a_xor_result;
-    wire                    not_signed_overflow;
     
     // Wire aliases
     assign mux_sel              = func[2:1];
@@ -65,9 +64,8 @@ module alu#(
     assign b_xor_sub                    = b_sign ^ sub_or_logic_select;                                         // 1-bit XOR (1/4 74LS86)
     assign a_xor_b_xor_sub              = a_sign ^ b_xor_sub;                                                   // 1-bit XOR (1/4 74LS86)
     assign a_xor_result                 = a_sign ^ result_sign;                                                 // 1-bit XOR (1/4 74LS86)
-    assign not_signed_overflow          = ~(not_a_xor_b_xor_sub & a_xor_result);                                // 1-bit NAND (1/4 74LS00)
+    assign signed_overflow              = not_a_xor_b_xor_sub & a_xor_result;                                   // 1-bit AND (1/4 74LS08)
     assign not_a_xor_b_xor_sub          = ~a_xor_b_xor_sub;                                                     // 1-bit inverter (1/6 74LS04)
-    assign signed_overflow              = ~not_signed_overflow;                                                 // 1-bit inverter (1/6 74LS04)
 
     always_comb unique case (mux_sel)                                                                           // 4:1 byte mux (4x 74LS153)
         2'b00: out = arith_result;
