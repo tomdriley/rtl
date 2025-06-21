@@ -1,6 +1,7 @@
 {
     "recommendations": [
         "mshr-h.veriloghdl",
-        "rashwell.tcl"
+        "rashwell.tcl",
+        "ms-azuretools.vscode-docker"
     ]
 }
