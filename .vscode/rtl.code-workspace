@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"remote.extensionKind": {
+			"GitHub.copilot": [
+				"ui"
+			],
+			"GitHub.copilot-chat": [
+				"ui"
+			]
+		}
+	}
+}

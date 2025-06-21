@@ -2,6 +2,8 @@
 
 ## Setup
 
+Ensure that you have `make` installed (e.g. `sudo apt install make`), and have Docker installed and running.
+
 ```bash
 make setup # Sets up docker and other dependencies
 ```
