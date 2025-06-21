@@ -9,7 +9,7 @@
 // It is not synthesizable since it uses a non-synthesizable clock generation method.
 module clk_rst_gen#(
     parameter int CLK_PERIOD_NS = 1000
-) (1
+) (
     input logic reset_btn,
     input logic manual_clk_sw,
     input logic pulse_clk_btn,
