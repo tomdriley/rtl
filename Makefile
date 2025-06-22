@@ -1,5 +1,3 @@
-.PHONY: setup test
+.PHONY: setup
 setup:
 	@./setup.sh
-test:
-	@./test.sh

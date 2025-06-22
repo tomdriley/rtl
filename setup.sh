@@ -146,13 +146,6 @@ ensure_docker() {
         return 1
     fi
     
-    # CI/GitHub Actions fix - try both socket locations
-    if [ -S "/var/run/docker.sock" ]; then
-        export DOCKER_HOST="unix:///var/run/docker.sock"
-    elif [ -S "/var/run/docker-host.sock" ]; then
-        export DOCKER_HOST="unix:///var/run/docker-host.sock"
-    fi
-    
     # Check if Docker daemon is running
     if ! docker info >/dev/null 2>&1; then
         log_error "Docker daemon not running. Please start Docker Desktop."
@@ -171,10 +164,9 @@ ensure_verilator() {
     # Check if image exists locally
     if ! docker image inspect "$image" >/dev/null 2>&1; then
         log_info "Verilator image not found locally, pulling..."
-        if ! docker pull "$image"; then
-            log_error "Failed to pull Verilator image"
-            return 1
-        fi
+        docker pull "$image"
+    else
+        log_info "Verilator image already available locally"
     fi
     
     # Test that Verilator works
