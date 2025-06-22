@@ -149,13 +149,37 @@ ensure_docker() {
     fi
     
     # Check if Docker daemon is running
-    if ! docker info >/dev/null 2>&1; then
-        log_error "Docker daemon not running. Please start Docker Desktop."
-        return 1
+    # Try default socket first
+    if docker info >/dev/null 2>&1; then
+        log_info "Docker is available and running on default socket"
+        return 0
     fi
     
-    log_info "Docker is available and running"
-    return 0
+    # If we're in GitHub Actions with Docker-in-Docker, the socket might be at a different location
+    if [ -n "$DOCKER_HOST" ]; then
+        log_info "Docker host environment variable set to: $DOCKER_HOST"
+        if docker --host "$DOCKER_HOST" info >/dev/null 2>&1; then
+            log_info "Docker is available and running on $DOCKER_HOST"
+            # Export this for all subsequent docker commands in the script
+            export DOCKER_HOST
+            return 0
+        fi
+    fi
+    
+    # Try common alternative socket locations
+    for socket in "/var/run/docker-host.sock" "/var/run/docker.sock"; do
+        if [ -S "$socket" ]; then
+            log_info "Found Docker socket at $socket, trying to connect..."
+            if DOCKER_HOST="unix://$socket" docker info >/dev/null 2>&1; then
+                log_info "Docker is available and running on unix://$socket"
+                export DOCKER_HOST="unix://$socket"
+                return 0
+            fi
+        fi
+    done
+    
+    log_error "Docker daemon not running. Please start Docker Desktop."
+    return 1
 }
 
 # Ensure Verilator Docker image is available and working

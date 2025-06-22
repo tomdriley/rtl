@@ -15,6 +15,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      # Set up Docker in Docker
+      - name: Set up Docker in Docker
+        run: |
+          # Start Docker daemon
+          sudo systemctl start docker
+          # Make docker socket accessible
+          sudo chmod 666 /var/run/docker.sock
+
       - name: Build and run dev container task
         uses: devcontainers/ci@v0.3
         with:
@@ -23,4 +31,7 @@ jobs:
           privileged: true
           env: |
             DOCKER_BUILDKIT=1
-            DOCKER_HOST=unix:///var/run/docker-host.sock
+          # Mount the Docker socket from host to container
+          # This is critical for Docker-in-Docker functionality
+          mounts: |
+            source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind
