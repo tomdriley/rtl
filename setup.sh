@@ -143,43 +143,24 @@ ensure_docker() {
     # Check if Docker CLI is available
     if ! command -v docker >/dev/null 2>&1; then
         log_error "Docker CLI not found. Please install Docker Desktop."
-        log_error "For WSL2: https://docs.docker.com/desktop/windows/wsl/"
-        log_error "For Linux: https://docs.docker.com/engine/install/"
         return 1
     fi
     
+    # CI/GitHub Actions fix - try both socket locations
+    if [ -S "/var/run/docker.sock" ]; then
+        export DOCKER_HOST="unix:///var/run/docker.sock"
+    elif [ -S "/var/run/docker-host.sock" ]; then
+        export DOCKER_HOST="unix:///var/run/docker-host.sock"
+    fi
+    
     # Check if Docker daemon is running
-    # Try default socket first
-    if docker info >/dev/null 2>&1; then
-        log_info "Docker is available and running on default socket"
-        return 0
+    if ! docker info >/dev/null 2>&1; then
+        log_error "Docker daemon not running. Please start Docker Desktop."
+        return 1
     fi
     
-    # If we're in GitHub Actions with Docker-in-Docker, the socket might be at a different location
-    if [ -n "$DOCKER_HOST" ]; then
-        log_info "Docker host environment variable set to: $DOCKER_HOST"
-        if docker --host "$DOCKER_HOST" info >/dev/null 2>&1; then
-            log_info "Docker is available and running on $DOCKER_HOST"
-            # Export this for all subsequent docker commands in the script
-            export DOCKER_HOST
-            return 0
-        fi
-    fi
-    
-    # Try common alternative socket locations
-    for socket in "/var/run/docker-host.sock" "/var/run/docker.sock"; do
-        if [ -S "$socket" ]; then
-            log_info "Found Docker socket at $socket, trying to connect..."
-            if DOCKER_HOST="unix://$socket" docker info >/dev/null 2>&1; then
-                log_info "Docker is available and running on unix://$socket"
-                export DOCKER_HOST="unix://$socket"
-                return 0
-            fi
-        fi
-    done
-    
-    log_error "Docker daemon not running. Please start Docker Desktop."
-    return 1
+    log_info "Docker is available and running"
+    return 0
 }
 
 # Ensure Verilator Docker image is available and working
@@ -190,9 +171,10 @@ ensure_verilator() {
     # Check if image exists locally
     if ! docker image inspect "$image" >/dev/null 2>&1; then
         log_info "Verilator image not found locally, pulling..."
-        docker pull "$image"
-    else
-        log_info "Verilator image already available locally"
+        if ! docker pull "$image"; then
+            log_error "Failed to pull Verilator image"
+            return 1
+        fi
     fi
     
     # Test that Verilator works

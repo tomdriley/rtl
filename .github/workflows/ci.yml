@@ -12,30 +12,14 @@ jobs:
       - name: Checkout (GitHub)
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      # Set up and verify Docker access
-      - name: Set up Docker in Docker
+      - name: Prepare Docker for dev container
         run: |
-          # Start Docker daemon
-          sudo systemctl start docker
-          # Make docker socket accessible
           sudo chmod 666 /var/run/docker.sock
-          # Verify Docker is working
-          docker version
-          docker info
-          echo "Docker is properly configured"
 
       - name: Build and run dev container task
         uses: devcontainers/ci@v0.3
         with:
           runCmd: make test
-          # These options enable proper Docker-in-Docker functionality
           privileged: true
-          env: |
-            DOCKER_BUILDKIT=1
-          # Mount the Docker socket from host to container
-          # This is critical for Docker-in-Docker functionality
           mounts: |
             source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind
