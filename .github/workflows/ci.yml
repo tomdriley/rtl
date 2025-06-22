@@ -22,4 +22,4 @@ jobs:
           runCmd: make test
           privileged: true
           mounts: |
-            source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind
+            type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock
