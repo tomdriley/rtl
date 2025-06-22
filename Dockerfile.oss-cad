@@ -1,0 +1,65 @@
+# OSS CAD Suite Docker Image
+#
+# This Dockerfile creates a containerized environment with the OSS CAD Suite,
+# which includes tools for digital design and verification such as:
+# - Yosys (RTL synthesis)
+# - SBY (formal verification front-end)
+# - nextpnr (place and route)
+# - Verilator (simulation)
+# - iverilog (Icarus Verilog simulator)
+# - Various SMT solvers (Z3, Yices, Boolector)
+# - And many more tools for FPGA development
+#
+# The Dockerfile uses a multi-stage build approach for efficiency and includes
+# robust downloading that adapts to OSS CAD Suite release name changes.
+
+# --- Builder stage ---
+FROM debian:bookworm-slim AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    wget ca-certificates xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt
+
+# Download and extract OSS CAD Suite for linux-x64
+RUN OSS_CAD_URL=$(wget -qO- https://api.github.com/repos/YosysHQ/oss-cad-suite-build/releases/latest | grep 'browser_download_url.*linux-x64.*\.tgz' | cut -d '"' -f 4) \
+    && wget -q "$OSS_CAD_URL" -O oss-cad-suite.tgz \
+    && tar -xzf oss-cad-suite.tgz \
+    && rm oss-cad-suite.tgz
+
+# --- Runtime stage ---
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install runtime dependencies
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    python3 python3-dev python3-pip \
+    libffi8 libreadline8 libtcl8.6 libgraphviz-dev \
+    libc6 libstdc++6 libgcc-s1 \
+    perl perl-modules-5.36 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy OSS CAD Suite from builder stage
+COPY --from=builder /opt/oss-cad-suite /opt/oss-cad-suite
+
+# Set up environment
+ENV PATH="/opt/oss-cad-suite/bin:$PATH"
+ENV PYTHONPATH="/opt/oss-cad-suite/lib/python3.11/site-packages"
+
+# Create wrapper script to source environment
+RUN echo '#!/bin/bash\nsource /opt/oss-cad-suite/environment\nexec "$@"' > /usr/local/bin/oss-cad-suite \
+    && chmod +x /usr/local/bin/oss-cad-suite
+
+# Verify installation by checking key tools
+RUN /opt/oss-cad-suite/bin/yosys --version \
+    && /opt/oss-cad-suite/bin/sby --version \
+    && /opt/oss-cad-suite/bin/nextpnr-ice40 --version \
+    && /opt/oss-cad-suite/bin/verilator --version
+
+# Default command - start an interactive shell with environment loaded
+CMD ["/bin/bash", "--rcfile", "/opt/oss-cad-suite/environment"]

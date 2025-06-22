@@ -51,6 +51,26 @@ make run   # Runs simulation and creates VCD file
 make waves # Opens waveforms in GTK Wave viewer
 ```
 
+### Formal Verification
+```bash
+cd formal
+make formal # Run bounded model checking (BMC)
+make cover  # Run cover analysis to find reachable states
+make waves  # View formal verification traces with intelligent selection
+```
+
+### Wave File Selection
+
+When multiple VCD traces are available from formal verification, the system provides flexible selection:
+
+```bash
+make waves              # Auto-select with guidance
+make waves-list         # List all available trace files  
+make waves WAVE=<file>  # Open specific trace file
+make waves-cover        # Open cover property traces
+make waves-bmc          # Open BMC counterexample traces
+```
+
 ## 🛠️ Development Environment Features
 
 ### Supported Environments
@@ -78,8 +98,13 @@ The setup script automatically detects your environment and installs only what's
 | `make setup` | Run setup script to install/verify dependencies |
 | `make build` | Build Verilog simulation using Verilator |
 | `make run` | Execute the simulation |
-| `make waves` | Open waveforms in GTK Wave viewer |
-| `make clean` | Clean build artifacts |
+| `make waves` | Open waveforms in GTK Wave viewer (auto-detects context) |
+| `make formal` | Run formal verification (BMC mode) |
+| `make cover` | Run cover analysis for formal verification |
+| `make waves-list` | List all available VCD trace files |
+| `make waves-cover` | Open cover traces specifically |
+| `make waves-bmc` | Open BMC traces (counterexamples) specifically |
+| `make clean` | Clean build artifacts and verification results |
 | `make rebuild` | Clean and rebuild |
 
 ## 📋 Requirements

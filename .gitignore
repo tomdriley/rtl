@@ -1,3 +1,24 @@
 .cache
 obj_dir
 *.vcd
+
+# Formal verification artifacts (SBY)
+*_bmc/
+*_cover/
+*_prove/
+*_live/
+sby-*/
+*.xml
+*.sqlite
+*.smtc
+*.yw
+*_tb.v
+status
+status.*
+PASS
+FAIL
+UNKNOWN
+logfile.txt
+config.sby
+# Note: SBY may also create directories with the same name as .sby files
+# These are cleaned by make clean but should be added to .gitignore per project
