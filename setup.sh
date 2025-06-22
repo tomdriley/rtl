@@ -232,6 +232,34 @@ ensure_gtkwave() {
     fi
 }
 
+# Ensure OSS CAD Docker image is available and working
+ensure_oss_cad() {
+    log_info "Checking OSS CAD Docker image..."
+    
+    # Check if image exists, build if necessary
+    if ! docker image inspect oss-cad:latest >/dev/null 2>&1; then
+        log_info "OSS CAD image not found, building..."
+        if ! docker build -t oss-cad -f Dockerfile.oss-cad .; then
+            log_error "Failed to build OSS CAD Docker image"
+            return 1
+        fi
+    else
+        log_info "OSS CAD image already available"
+    fi
+    
+    # Test OSS CAD with version check using same config as Makefile
+    log_info "Testing OSS CAD..."
+    
+    # Test running SBY from OSS CAD image 
+    if docker run --rm --entrypoint sby oss-cad --version >/dev/null 2>&1; then
+        log_info "OSS CAD is working correctly"
+        return 0
+    else
+        log_error "OSS CAD test failed"
+        return 1
+    fi
+}
+
 # Main setup logic
 main() {
     log_info "Starting RTL development environment setup..."
@@ -264,6 +292,10 @@ main() {
     if ! ensure_gtkwave; then
         setup_failed=true
     fi
+
+    if ! ensure_oss_cad; then
+        setup_failed=true
+    fi
     
     if [ "$setup_failed" = true ]; then
         log_error "Setup failed - some dependencies could not be installed or verified"
@@ -276,10 +308,12 @@ main() {
     log_info "  • make build  - Build Verilog projects"
     log_info "  • make run    - Run simulations"  
     log_info "  • make waves  - View waveforms with GTK Wave"
+    log_info "  • make formal - Run formal verification with OSS CAD SBY"
     log_info ""
     log_info "Example usage:"
     log_info "  cd hello && make build && make run"
     log_info "  cd waves && make waves"
+    log_info "  cd formal && make formal"
 }
 
 # Run main function

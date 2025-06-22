@@ -10,7 +10,7 @@ VERILATOR_BUILD_ARGS := --main --timing --build --exe -Wall -j 0 -o run_sim --tr
 VERILATOR_INCLUDE_ARGS = $(addprefix -I, $(INCLUDE_DIRS))
 
 GTK_WAVES_IMAGE := gtk-wave:latest
-OSS_CAD_IMAGE := oss-cad-suite-test:latest
+OSS_CAD_IMAGE := oss-cad:latest
 
 # SBY Docker command
 SBY_DOCKER := docker run --rm -ti \
