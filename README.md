@@ -17,8 +17,8 @@ Open this repository in VS Code with the Dev Containers extension:
 make setup
 
 # Try the examples:
-cd hello && make build && make run
-cd waves && make build && make run && make waves
+cd examples/hello && make build && make run
+cd examples/waves && make build && make run && make waves
 ```
 
 ### Option 2: Native/WSL2 Environment
@@ -30,22 +30,22 @@ Clone and set up on Ubuntu/WSL2:
 ./setup.sh
 
 # Then use normally:
-cd hello && make build && make run
-cd waves && make build && make run && make waves
+cd examples/hello && make build && make run
+cd examples/waves && make build && make run && make waves
 ```
 
 ## 📁 Examples
 
 ### Hello World Simulation
 ```bash
-cd hello
+cd examples/hello
 make build # Generates Verilator simulation files
 make run   # Runs the simulation
 ```
 
 ### Waveform Visualization
 ```bash
-cd waves
+cd examples/waves
 make build # Generates simulation files
 make run   # Runs simulation and creates VCD file
 make waves # Opens waveforms in GTK Wave viewer
@@ -53,7 +53,7 @@ make waves # Opens waveforms in GTK Wave viewer
 
 ### Formal Verification
 ```bash
-cd formal
+cd examples/formal
 make formal # Run bounded model checking (BMC)
 make cover  # Run cover analysis to find reachable states
 make waves  # View formal verification traces with intelligent selection

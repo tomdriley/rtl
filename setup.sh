@@ -187,7 +187,7 @@ ensure_gtkwave() {
     # Check if image exists, build if necessary
     if ! docker image inspect gtk-wave:latest >/dev/null 2>&1; then
         log_info "GTK Wave image not found, building..."
-        if ! docker build -t gtk-wave -f Dockerfile.gtk-wave .; then
+        if ! docker build -t gtk-wave -f tools/Dockerfile.gtk-wave .; then
             log_error "Failed to build GTK Wave Docker image"
             return 1
         fi
@@ -239,7 +239,7 @@ ensure_oss_cad() {
     # Check if image exists, build if necessary
     if ! docker image inspect oss-cad:latest >/dev/null 2>&1; then
         log_info "OSS CAD image not found, building..."
-        if ! docker build -t oss-cad -f Dockerfile.oss-cad .; then
+        if ! docker build -t oss-cad -f tools/Dockerfile.oss-cad .; then
             log_error "Failed to build OSS CAD Docker image"
             return 1
         fi
