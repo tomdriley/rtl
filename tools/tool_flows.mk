@@ -1,9 +1,20 @@
+ifndef TOOL_FLOWS_MK
+TOOL_FLOWS_MK := 1
+
+ifndef PROJECT_ROOT
+PROJECT_ROOT := $(PWD)
+endif # PROJECT_ROOT
+
+ifndef CURRENT_DIR
+CURRENT_DIR := /work
+endif # CURRENT_DIR
+
 # Common variables
 VERILATOR_IMAGE := verilator/verilator:v5.036
 VERILATOR_DOCKER := docker run --rm -ti \
-	-v "$(PWD)":/work \
-	-e HOME=/work \
-	-w /work \
+	-v "$(PROJECT_ROOT)":/work \
+	-e HOME=$(CURRENT_DIR) \
+	-w $(CURRENT_DIR) \
 	--user $(shell id -u):$(shell id -g) \
 	$(VERILATOR_IMAGE)
 VERILATOR_BUILD_ARGS := --main --timing --build --exe -Wall -j 0 -o run_sim --trace --assert
@@ -14,8 +25,8 @@ OSS_CAD_IMAGE := oss-cad:latest
 
 # SBY Docker command
 SBY_DOCKER := docker run --rm -ti \
-	-v "$(PWD)":/work \
-	-w /work \
+	-v "$(PROJECT_ROOT)":/work \
+	-w $(CURRENT_DIR) \
 	--user $(shell id -u):$(shell id -g) \
 	$(OSS_CAD_IMAGE) sby
 
@@ -26,9 +37,9 @@ ifeq ($(shell test -S /tmp/.X11-unix/X$(patsubst :%,%,$(DISPLAY)) && echo wslg),
         -v /tmp/.X11-unix:/tmp/.X11-unix \
         -v /mnt/wslg:/mnt/wslg \
         -e DISPLAY -e WAYLAND_DISPLAY -e XDG_RUNTIME_DIR \
-        -v "$(PWD)":/work \
-        -e HOME=/work \
-        -w /work \
+        -v "$(PROJECT_ROOT)":/work \
+        -e HOME=$(CURRENT_DIR) \
+        -w $(CURRENT_DIR) \
         --user $(shell id -u):$(shell id -g) \
         $(GTK_WAVES_IMAGE) gtkwave
 else
@@ -37,9 +48,9 @@ else
         --network host \
         -e DISPLAY=$(DISPLAY) \
         $(if $(wildcard $(HOME)/.Xauthority),-v "$(HOME)/.Xauthority:$(HOME)/.Xauthority:ro") \
-        -v "$(PWD)":/work \
-        -e HOME=/work \
-        -w /work \
+        -v "$(PROJECT_ROOT)":/work \
+        -e HOME=$(CURRENT_DIR) \
+        -w $(CURRENT_DIR) \
         --user $(shell id -u):$(shell id -g) \
         $(GTK_WAVES_IMAGE) gtkwave
 endif
@@ -164,3 +175,5 @@ waves:
 		echo "No wave file specified. Set WAVE_FILE or WAVE variable, or run from formal verification directory."; \
 		exit 1; \
 	fi
+
+endif # TOOL_FLOWS_MK
