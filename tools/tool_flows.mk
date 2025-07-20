@@ -17,7 +17,7 @@ VERILATOR_DOCKER := docker run --rm -ti \
 	-w $(CURRENT_DIR) \
 	--user $(shell id -u):$(shell id -g) \
 	$(VERILATOR_IMAGE)
-VERILATOR_BUILD_ARGS := --main --timing --build --exe -Wall -j 0 -o run_sim --trace --assert
+VERILATOR_BUILD_ARGS := --main --timing --build --exe -Wall -j 0 -o run_sim --trace --assert $(DEFINES)
 VERILATOR_INCLUDE_ARGS = $(addprefix -I, $(INCLUDE_DIRS))
 
 GTK_WAVES_IMAGE := gtk-wave:latest
@@ -79,7 +79,7 @@ obj_dir/run_sim: $(FILE_LIST)
 	$(VERILATOR_DOCKER) $(VERILATOR_BUILD_ARGS) $(VERILATOR_INCLUDE_ARGS) $(FILE_LIST)
 
 run: obj_dir/run_sim
-	obj_dir/run_sim
+	obj_dir/run_sim $(PLUSARGS)
 
 # Formal verification rules
 formal: $(SBY_FILE)
