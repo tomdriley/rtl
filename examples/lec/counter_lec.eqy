@@ -18,5 +18,5 @@ prep -top counter
 [strategy sby]
 # Use SBY as the equivalence checking strategy
 use sby
-depth 10
+depth 100
 engine smtbmc

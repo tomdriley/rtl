@@ -22,3 +22,23 @@ logfile.txt
 config.sby
 # Note: SBY may also create directories with the same name as .sby files
 # These are cleaned by make clean but should be added to .gitignore per project
+
+# Logical Equivalence Checking artifacts (EQY)
+eqy-*/
+*.eqy.log
+# EQY creates directories with the same name as .eqy files (e.g., counter_lec/ from counter_lec.eqy)
+# These contain gold.log, gate.log, combine.log, partition.log, strategies/ subdirectories, etc.
+# Common EQY output directory patterns:
+*_lec/
+*_eqy/
+# Additional EQY-specific files
+*.ids
+*.il
+*.ys
+combined.il
+*_recoded.ids
+*_recoded.il
+matched.ids
+partition.list
+summary_targets.list
+strategies.mk
