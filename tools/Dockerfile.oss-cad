@@ -42,6 +42,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libc6 libstdc++6 libgcc-s1 \
     perl perl-modules-5.36 \
     ca-certificates \
+    make \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy OSS CAD Suite from builder stage

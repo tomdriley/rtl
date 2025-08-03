@@ -30,6 +30,13 @@ SBY_DOCKER := docker run --rm -ti \
 	--user $(shell id -u):$(shell id -g) \
 	$(OSS_CAD_IMAGE) sby
 
+# EQY Docker command
+EQY_DOCKER := docker run --rm -ti \
+	-v "$(PROJECT_ROOT)":/work \
+	-w $(CURRENT_DIR) \
+	--user $(shell id -u):$(shell id -g) \
+	$(OSS_CAD_IMAGE) eqy
+
 # Auto-detect X11 environment (VNC vs WSLg)
 ifeq ($(shell test -S /tmp/.X11-unix/X$(patsubst :%,%,$(DISPLAY)) && echo wslg),wslg)
     # WSL2/WSLg environment - traditional X11 socket
@@ -57,7 +64,7 @@ endif
 
 
 # Common rules
-.PHONY: clean rebuild build run waves formal formal-cover formal-waves waves-list waves-cover waves-bmc
+.PHONY: clean rebuild build run waves formal formal-cover formal-waves waves-list waves-cover waves-bmc lec lec-waves
 
 clean:
 	@# Clean Verilator artifacts
@@ -66,8 +73,11 @@ clean:
 	rm -rf *_bmc *_cover *_prove *_live
 	rm -rf sby-* *.xml *.sqlite *.smtc *.yw *_tb.v
 	rm -rf status status.* PASS FAIL UNKNOWN logfile.txt config.sby
-	@# Remove any directories that match .sby basenames (SBY output directories)
+	@# Clean equivalence checking artifacts
+	rm -rf eqy-* *.eqy.log
+	@# Remove any directories that match .sby/.eqy basenames (SBY/EQY output directories)
 	@for f in *.sby; do [ -f "$$f" ] && rm -rf "$$(basename "$$f" .sby)" || true; done 2>/dev/null || true
+	@for f in *.eqy; do [ -f "$$f" ] && rm -rf "$$(basename "$$f" .eqy)" || true; done 2>/dev/null || true
 
 rebuild:
 	$(MAKE) clean
@@ -174,6 +184,43 @@ waves:
 	else \
 		echo "No wave file specified. Set WAVE_FILE or WAVE variable, or run from formal verification directory."; \
 		exit 1; \
+	fi
+
+# Logical Equivalence Checking (LEC) rules
+lec: $(EQY_FILE)
+	$(EQY_DOCKER) -f $(EQY_FILE)
+
+lec-waves: $(EQY_FILE)
+	@# List and select VCD files from equivalence checking
+	@EQY_BASE=$$(basename $(EQY_FILE) .eqy); \
+	if [ -n "$(WAVE)" ]; then \
+		if [ -f "$(WAVE)" ]; then \
+			echo "Opening specified trace: $(WAVE)"; \
+			$(GTKWAVES_DOCKER) $(WAVE); \
+		else \
+			echo "Error: Specified wave file '$(WAVE)' not found."; \
+			exit 1; \
+		fi \
+	else \
+		TRACE_FILES=$$(find "$${EQY_BASE}" -name "*.vcd" 2>/dev/null | sort); \
+		if [ -n "$$TRACE_FILES" ]; then \
+			TRACE_COUNT=$$(echo "$$TRACE_FILES" | wc -l); \
+			if [ $$TRACE_COUNT -eq 1 ]; then \
+				TRACE_FILE=$$TRACE_FILES; \
+				echo "Opening equivalence trace: $$TRACE_FILE"; \
+				$(GTKWAVES_DOCKER) $$TRACE_FILE; \
+			else \
+				echo "Multiple VCD files found:"; \
+				echo "$$TRACE_FILES" | nl -w2 -s': '; \
+				echo ""; \
+				echo "Usage: make lec-waves WAVE=<filename>     # Open specific file"; \
+				echo ""; \
+				echo "Opening first trace: $$(echo "$$TRACE_FILES" | head -1)"; \
+				$(GTKWAVES_DOCKER) $$(echo "$$TRACE_FILES" | head -1); \
+			fi \
+		else \
+			echo "No VCD trace files found. Run 'make lec' first."; \
+		fi \
 	fi
 
 endif # TOOL_FLOWS_MK

@@ -1,0 +1,22 @@
+# EQY configuration for logical equivalence checking
+# This demonstrates checking equivalence between two implementations of a counter
+
+[gold]
+# The "gold" reference design - known to be correct
+read_verilog counter_gold.v
+prep -top counter
+
+[gate]
+# The "gate" design under test - to be verified for equivalence
+read_verilog counter_gate.v
+prep -top counter
+
+[collect *]
+# Collect all logic for equivalence checking
+# For this simple counter example, we check everything together
+
+[strategy sby]
+# Use SBY as the equivalence checking strategy
+use sby
+depth 10
+engine smtbmc
