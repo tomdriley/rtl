@@ -1,0 +1,49 @@
+# sv2v Docker Image
+#
+# This Dockerfile creates a containerized environment with sv2v,
+# a SystemVerilog to Verilog converter.
+# 
+# sv2v converts SystemVerilog (IEEE 1800-2017) to Verilog (IEEE 1364-2005),
+# with an emphasis on supporting synthesizable language constructs.
+#
+# The Dockerfile uses a multi-stage build approach for efficiency and includes
+# robust downloading that adapts to sv2v release name changes.
+
+# --- Builder stage ---
+FROM debian:bookworm-slim AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    wget ca-certificates unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt
+
+# Download and extract sv2v binary for linux-x64
+RUN SV2V_URL=$(wget -qO- https://api.github.com/repos/zachjs/sv2v/releases/latest | grep 'browser_download_url.*Linux.*' | cut -d '"' -f 4) \
+    && wget -q "$SV2V_URL" -O sv2v-linux.zip \
+    && unzip sv2v-linux.zip \
+    && rm sv2v-linux.zip \
+    && mv sv2v-Linux/sv2v ./sv2v \
+    && chmod +x sv2v
+
+# --- Runtime stage ---
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install runtime dependencies
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    libc6 libstdc++6 libgcc-s1 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy sv2v binary from builder stage
+COPY --from=builder /opt/sv2v /usr/local/bin/sv2v
+
+# Verify installation
+RUN sv2v --version
+
+# Default command - start an interactive shell
+CMD ["/bin/bash"]

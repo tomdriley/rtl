@@ -22,6 +22,7 @@ VERILATOR_INCLUDE_ARGS = $(addprefix -I, $(INCLUDE_DIRS))
 
 GTK_WAVES_IMAGE := gtk-wave:latest
 OSS_CAD_IMAGE := oss-cad:latest
+SV2V_IMAGE := sv2v:latest
 
 # SBY Docker command
 SBY_DOCKER := docker run --rm -ti \
@@ -36,6 +37,13 @@ EQY_DOCKER := docker run --rm -ti \
 	-w $(CURRENT_DIR) \
 	--user $(shell id -u):$(shell id -g) \
 	$(OSS_CAD_IMAGE) eqy
+
+# SV2V Docker command
+SV2V_DOCKER := docker run --rm -ti \
+	-v "$(PROJECT_ROOT)":/work \
+	-w $(CURRENT_DIR) \
+	--user $(shell id -u):$(shell id -g) \
+	$(SV2V_IMAGE) sv2v
 
 # Auto-detect X11 environment (VNC vs WSLg)
 ifeq ($(shell test -S /tmp/.X11-unix/X$(patsubst :%,%,$(DISPLAY)) && echo wslg),wslg)
@@ -221,6 +229,23 @@ lec-waves: $(EQY_FILE)
 		else \
 			echo "No VCD trace files found. Run 'make lec' first."; \
 		fi \
+	fi
+
+# SystemVerilog to Verilog conversion rules
+# Usage: make sv2v SV2V_FILES="file1.sv file2.sv" [SV2V_OUT_DIR=output_dir]
+# If SV2V_OUT_DIR is not specified, creates .v files adjacent to .sv files
+sv2v:
+	@if [ -z "$(SV2V_FILES)" ]; then \
+		echo "Error: SV2V_FILES variable not set. Please specify SystemVerilog files to convert."; \
+		echo "Usage: make sv2v SV2V_FILES=\"file1.sv file2.sv\" [SV2V_OUT_DIR=output_dir]"; \
+		exit 1; \
+	fi
+	@if [ -n "$(SV2V_OUT_DIR)" ]; then \
+		echo "Converting $(SV2V_FILES) to directory $(SV2V_OUT_DIR)..."; \
+		$(SV2V_DOCKER) -w $(SV2V_OUT_DIR) $(SV2V_FILES); \
+	else \
+		echo "Converting $(SV2V_FILES) to adjacent .v files..."; \
+		$(SV2V_DOCKER) --write=adjacent $(SV2V_FILES); \
 	fi
 
 endif # TOOL_FLOWS_MK
