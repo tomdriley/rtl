@@ -45,6 +45,13 @@ SV2V_DOCKER := docker run --rm -ti \
 	--user $(shell id -u):$(shell id -g) \
 	$(SV2V_IMAGE) sv2v
 
+# Yosys Docker command (for synthesis)
+YOSYS_DOCKER := docker run --rm -ti \
+	-v "$(PROJECT_ROOT)":/work \
+	-w $(CURRENT_DIR) \
+	--user $(shell id -u):$(shell id -g) \
+	$(OSS_CAD_IMAGE) yosys
+
 # Auto-detect X11 environment (VNC vs WSLg)
 ifeq ($(shell test -S /tmp/.X11-unix/X$(patsubst :%,%,$(DISPLAY)) && echo wslg),wslg)
     # WSL2/WSLg environment - traditional X11 socket
@@ -72,7 +79,7 @@ endif
 
 
 # Common rules
-.PHONY: clean rebuild build run waves formal formal-cover formal-waves waves-list waves-cover waves-bmc lec lec-waves
+.PHONY: clean rebuild build run waves formal formal-cover formal-waves waves-list waves-cover waves-bmc lec lec-waves synth sv2v
 
 clean:
 	@# Clean Verilator artifacts
@@ -83,6 +90,8 @@ clean:
 	rm -rf status status.* PASS FAIL UNKNOWN logfile.txt config.sby
 	@# Clean equivalence checking artifacts
 	rm -rf eqy-* *.eqy.log
+	@# Clean synthesis artifacts
+	rm -f *_synth*.v _synth*.sv*.log
 	@# Remove any directories that match .sby/.eqy basenames (SBY/EQY output directories)
 	@for f in *.sby; do [ -f "$$f" ] && rm -rf "$$(basename "$$f" .sby)" || true; done 2>/dev/null || true
 	@for f in *.eqy; do [ -f "$$f" ] && rm -rf "$$(basename "$$f" .eqy)" || true; done 2>/dev/null || true
@@ -197,6 +206,10 @@ waves:
 # Logical Equivalence Checking (LEC) rules
 lec: $(EQY_FILE)
 	$(EQY_DOCKER) -f $(EQY_FILE)
+
+# Synthesis rules
+synth: $(SYNTH_SCRIPT)
+	$(YOSYS_DOCKER) -s $(SYNTH_SCRIPT)
 
 lec-waves: $(EQY_FILE)
 	@# List and select VCD files from equivalence checking

@@ -1,0 +1,26 @@
+# Yosys Synthesis Script - Counter Example
+# Demonstrates basic synthesis flows for digital circuits
+
+read_verilog counter.v
+hierarchy -check -top counter
+proc
+
+# Flow 1: Basic gate synthesis
+design -save original
+abc -g simple
+stat
+write_verilog -noattr counter_synth_gates.v
+
+# Flow 2: LUT-based synthesis  
+design -load original
+abc -lut 4
+stat
+write_verilog -noattr counter_synth_luts.v
+
+# Flow 3: Technology library synthesis
+design -load original
+dfflibmap -liberty 74ls_gates.lib
+abc -liberty 74ls_gates.lib
+clean
+stat
+write_verilog -noattr counter_synth_74ls_lib.v

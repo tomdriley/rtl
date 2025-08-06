@@ -34,7 +34,6 @@ eqy-*/
 # Additional EQY-specific files
 *.ids
 *.il
-*.ys
 combined.il
 *_recoded.ids
 *_recoded.il

@@ -1,0 +1,86 @@
+library(74ls_basic) {
+    technology("ttl");
+    
+    time_unit: "1ns";
+    voltage_unit: "1V";
+    current_unit: "1mA";
+    capacitive_load_unit(1, pf);
+    
+    nom_process: 1;
+    nom_temperature: 25;
+    nom_voltage: 5;
+    
+    // 7400 quad 2-input NAND gate
+    cell(7400_4x1NAND2) {
+        area: 14; // 14-pin package
+        pin(A) { direction: input; }
+        pin(B) { direction: input; }
+        pin(Y) { direction: output; function: "(A*B)'"; }
+    }
+    
+    // 7404 hex inverter
+    cell(7404_6x1NOT) {
+        area: 14; // 14-pin package
+        pin(A) { direction: input; }
+        pin(Y) { direction: output; function: "A'"; }
+    }
+    
+    // 7408 quad 2-input AND gate
+    cell(7408_4x1AND2) {
+        area: 14; // 14-pin package
+        pin(A) { direction: input; }
+        pin(B) { direction: input; }
+        pin(Y) { direction: output; function: "A*B"; }
+    }
+    
+    // 7432 quad 2-input OR gate
+    cell(7432_4x1OR2) {
+        area: 14; // 14-pin package
+        pin(A) { direction: input; }
+        pin(B) { direction: input; }
+        pin(Y) { direction: output; function: "A+B"; }
+    }
+    
+    // 7486 quad 2-input XOR gate
+    cell(7486_4x1XOR2) {
+        area: 14; // 14-pin package
+        pin(A) { direction: input; }
+        pin(B) { direction: input; }
+        pin(Y) { direction: output; function: "A^B"; }
+    }
+    
+    // 74157 quad 2:1 multiplexer
+    cell(74157_4x1MUX2) {
+        area: 16; // 16-pin package
+        pin(A) { direction: input; }
+        pin(B) { direction: input; }
+        pin(S) { direction: input; }
+        pin(Y) { direction: output; function: "(S'*A)+(S*B)"; }
+    }
+    
+    // Buffer cell for ABC
+    cell("$_BUF_") {
+        area: 14;
+        pin(A) { direction: input; }
+        pin(Y) { direction: output; function: "A"; }
+    }
+
+    // 7474 dual D flip-flop with preset and clear
+    cell(7474_2x1DFF) {
+        area: 14;
+        ff(IQ, IQN) { 
+            clocked_on: "CLK"; 
+            next_state: "D"; 
+            clear: "CLR'";
+            preset: "PRE'";
+            clear_preset_var1: L;
+            clear_preset_var2: L;
+        }
+        pin(CLK) { direction: input; clock: true; }
+        pin(D) { direction: input; }
+        pin(CLR) { direction: input; }
+        pin(PRE) { direction: input; }
+        pin(Q) { direction: output; function: "IQ"; }
+        pin(QN) { direction: output; function: "IQN"; }
+    }
+}
