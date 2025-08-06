@@ -1,32 +1,37 @@
 # sv2v Docker Image
 #
 # This Dockerfile creates a containerized environment with sv2v,
-# a SystemVerilog to Verilog converter.
+# a SystemVerilog to Verilog converter built from source.
 # 
 # sv2v converts SystemVerilog (IEEE 1800-2017) to Verilog (IEEE 1364-2005),
 # with an emphasis on supporting synthesizable language constructs.
 #
-# The Dockerfile uses a multi-stage build approach for efficiency and includes
-# robust downloading that adapts to sv2v release name changes.
+# The Dockerfile uses a multi-stage build approach for efficiency and builds
+# sv2v from the latest main branch source code.
 
 # --- Builder stage ---
 FROM debian:bookworm-slim AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install build dependencies including Haskell Stack
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-    wget ca-certificates unzip \
+    wget ca-certificates git curl build-essential \
+    libffi-dev libgmp-dev zlib1g-dev \
+    gnupg netbase libnuma-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Haskell Stack
+RUN curl -sSL https://get.haskellstack.org/ | sh
 
 WORKDIR /opt
 
-# Download and extract sv2v binary for linux-x64
-RUN SV2V_URL=$(wget -qO- https://api.github.com/repos/zachjs/sv2v/releases/latest | grep 'browser_download_url.*Linux.*' | cut -d '"' -f 4) \
-    && wget -q "$SV2V_URL" -O sv2v-linux.zip \
-    && unzip sv2v-linux.zip \
-    && rm sv2v-linux.zip \
-    && mv sv2v-Linux/sv2v ./sv2v \
-    && chmod +x sv2v
+# Clone and build sv2v from source (main branch)
+RUN git clone https://github.com/zachjs/sv2v.git \
+    && cd sv2v \
+    && make \
+    && cp bin/sv2v /opt/sv2v \
+    && chmod +x /opt/sv2v
 
 # --- Runtime stage ---
 FROM debian:bookworm-slim
@@ -40,7 +45,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy sv2v binary from builder stage
-COPY --from=builder /opt/sv2v /usr/local/bin/sv2v
+COPY --from=builder /opt/sv2v/bin/sv2v /usr/local/bin/sv2v
 
 # Verify installation
 RUN sv2v --version
