@@ -256,12 +256,19 @@ sv2v:
 		echo "Usage: make sv2v SV2V_FILES=\"file1.sv file2.sv\" [SV2V_OUT_DIR=output_dir]"; \
 		exit 1; \
 	fi
-	@if [ -n "$(SV2V_OUT_DIR)" ]; then \
-		echo "Converting $(SV2V_FILES) to directory $(SV2V_OUT_DIR)..."; \
-		$(SV2V_DOCKER) -w $(SV2V_OUT_DIR) $(SV2V_FILES); \
-	else \
-		echo "Converting $(SV2V_FILES) to adjacent .v files..."; \
-		$(SV2V_DOCKER) --write=adjacent $(SV2V_FILES); \
+	@echo "Converting $(SV2V_FILES) to adjacent .v files..."; \
+	$(SV2V_DOCKER) --write=adjacent $(SV2V_FILES); \
+	if [ -n "$(SV2V_OUT_DIR)" ]; then \
+		echo "Moving generated .v files to $(SV2V_OUT_DIR)..."; \
+		mkdir -p "$(SV2V_OUT_DIR)"; \
+		for f in $(SV2V_FILES); do \
+			outf="$${f%.sv}.v"; \
+			if [ -f "$$outf" ]; then \
+				mv "$$outf" "$(SV2V_OUT_DIR)/"; \
+			else \
+				echo "Warning: Output file $$outf not found."; \
+			fi; \
+		done; \
 	fi
 
 endif # TOOL_FLOWS_MK
