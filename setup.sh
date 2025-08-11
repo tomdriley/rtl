@@ -260,6 +260,34 @@ ensure_oss_cad() {
     fi
 }
 
+# Ensure sv2v Docker image is available and working
+ensure_sv2v() {
+    log_info "Checking sv2v Docker image..."
+
+    # Check if image exists, build if necessary
+    if ! docker image inspect sv2v:latest >/dev/null 2>&1; then
+        log_info "sv2v image not found, building..."
+        if ! docker build -t sv2v -f tools/Dockerfile.sv2v .; then
+            log_error "Failed to build sv2v Docker image"
+            return 1
+        fi
+    else
+        log_info "sv2v image already available"
+    fi
+
+    # Test sv2v with version check using same config as Makefile
+    log_info "Testing sv2v..."
+
+    # Test running sv2v from sv2v image
+    if docker run --rm --entrypoint sv2v sv2v --version >/dev/null 2>&1; then
+        log_info "sv2v is working correctly"
+        return 0
+    else
+        log_error "sv2v test failed"
+        return 1
+    fi
+}
+
 # Main setup logic
 main() {
     log_info "Starting RTL development environment setup..."
@@ -296,6 +324,10 @@ main() {
     if ! ensure_oss_cad; then
         setup_failed=true
     fi
+
+    if ! ensure_sv2v; then
+        setup_failed=true
+    fi
     
     if [ "$setup_failed" = true ]; then
         log_error "Setup failed - some dependencies could not be installed or verified"
@@ -309,11 +341,15 @@ main() {
     log_info "  • make run    - Run simulations"  
     log_info "  • make waves  - View waveforms with GTK Wave"
     log_info "  • make formal - Run formal verification with OSS CAD SBY"
+    log_info "  • make sv2v   - Convert SystemVerilog to Verilog using sv2v"
+    log_info "  • make synth  - Synthesize designs with Yosys"
     log_info ""
     log_info "Example usage:"
-    log_info "  cd hello && make build && make run"
-    log_info "  cd waves && make waves"
-    log_info "  cd formal && make formal"
+    log_info "  cd examples/hello && make build && make run"
+    log_info "  cd examples/waves && make waves"
+    log_info "  cd examples/formal && make formal"
+    log_info "  cd examples/sv2v && make sv2v"
+    log_info "  cd examples/synthesis && make synth"
 }
 
 # Run main function
