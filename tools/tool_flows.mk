@@ -95,6 +95,9 @@ clean:
 	@# Remove any directories that match .sby/.eqy basenames (SBY/EQY output directories)
 	@for f in *.sby; do [ -f "$$f" ] && rm -rf "$$(basename "$$f" .sby)" || true; done 2>/dev/null || true
 	@for f in *.eqy; do [ -f "$$f" ] && rm -rf "$$(basename "$$f" .eqy)" || true; done 2>/dev/null || true
+	# Clean up scratch / temporary files
+	rm -rf temp/ tmp/ scratch/ build_*/ 
+
 
 rebuild:
 	$(MAKE) clean

@@ -41,3 +41,9 @@ matched.ids
 partition.list
 summary_targets.list
 strategies.mk
+
+# Scratch / temporary files
+temp/
+tmp/
+scratch/
+build_*/
