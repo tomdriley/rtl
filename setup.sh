@@ -36,105 +36,133 @@ is_dev_container() {
     [ -n "$REMOTE_CONTAINERS" ] || [ -n "$CODESPACES" ] || [ -f /.dockerenv ] || [ -n "$VSCODE_REMOTE_CONTAINERS_SESSION" ]
 }
 
-# Check and install system dependencies as needed
+# Check and install system dependencies (Ubuntu/Debian + Fedora only)
 ensure_system_dependencies() {
     log_info "Checking system dependencies..."
-    
-    # Define dependencies with their package names for different systems
+
+    # Hard fail if not bash with associative array support
+    if ! (echo "${BASH_VERSINFO[0]}" | grep -Eq '^[0-9]+$') || [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
+        log_error "This script requires bash >= 4 (associative arrays)."
+        return 1
+    fi
+
+    # Detect supported OS family + package manager
+    local pm=""
+    if command -v apt-get >/dev/null 2>&1; then
+        pm="apt"
+    elif command -v dnf >/dev/null 2>&1; then
+        pm="dnf"
+    else
+        log_error "Unsupported system: only Ubuntu/Debian (apt-get) and Fedora (dnf) are supported."
+        return 1
+    fi
+
+    # Dependencies expressed as COMMAND -> PACKAGE
+    # Note: some commands map to packages that provide them.
     declare -A apt_packages=(
         ["git"]="git"
         ["curl"]="curl"
         ["wget"]="wget"
         ["make"]="make"
-        ["gcc"]="build-essential"
+        ["gcc"]="gcc"
+        ["g++"]="g++"
         ["xeyes"]="x11-apps"
         ["xterm"]="xterm"
         ["gedit"]="gedit"
         ["tree"]="tree"
         ["vim"]="vim"
     )
-    
-    declare -A yum_packages=(
+
+    declare -A dnf_packages=(
         ["git"]="git"
         ["curl"]="curl"
         ["wget"]="wget"
         ["make"]="make"
-        ["gcc"]="gcc gcc-c++"
-        ["xeyes"]="xorg-x11-apps"
+        ["gcc"]="gcc"
+        ["g++"]="gcc-c++"
+        ["xeyes"]="xeyes"
         ["xterm"]="xterm"
         ["gedit"]="gedit"
         ["tree"]="tree"
         ["vim"]="vim"
     )
-    
-    local missing_deps=()
-    local to_install=()
-    
-    # Check which dependencies are missing
-    for cmd in "${!apt_packages[@]}"; do
+
+    local -a missing_cmds=()
+    local -a to_install=()
+
+    # Pick the right mapping
+    local -n pkgmap
+    if [ "$pm" = "apt" ]; then
+        pkgmap=apt_packages
+        log_info "Using apt-get (Ubuntu/Debian)"
+    else
+        pkgmap=dnf_packages
+        log_info "Using dnf (Fedora)"
+    fi
+
+    # Check what commands are missing
+    for cmd in "${!pkgmap[@]}"; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
-            missing_deps+=("$cmd")
+            missing_cmds+=("$cmd")
         fi
     done
-    
-    if [ ${#missing_deps[@]} -eq 0 ]; then
+
+    if [ ${#missing_cmds[@]} -eq 0 ]; then
         log_info "All system dependencies are already installed"
         return 0
     fi
-    
-    log_info "Missing dependencies: ${missing_deps[*]}"
-    
-    # Determine what packages to install based on package manager
-    if command -v apt-get >/dev/null 2>&1; then
-        log_info "Using apt package manager"
-        for cmd in "${missing_deps[@]}"; do
-            if [ -n "${apt_packages[$cmd]}" ]; then
-                to_install+=("${apt_packages[$cmd]}")
-            fi
-        done
-        
-        if [ ${#to_install[@]} -gt 0 ]; then
-            log_info "Installing packages: ${to_install[*]}"
-            sudo apt-get update
-            sudo apt-get install -y "${to_install[@]}"
+
+    log_info "Missing commands: ${missing_cmds[*]}"
+
+    # Build install list (dedupe)
+    declare -A seen_pkg=()
+    local cmd pkg
+    for cmd in "${missing_cmds[@]}"; do
+        pkg="${pkgmap[$cmd]}"
+        if [ -n "$pkg" ]; then
+            # pkg may contain multiple packages (space-separated)
+            for p in $pkg; do
+                if [ -z "${seen_pkg[$p]+x}" ]; then
+                    to_install+=("$p")
+                    seen_pkg["$p"]=1
+                fi
+            done
         fi
-        
-    elif command -v yum >/dev/null 2>&1; then
-        log_info "Using yum package manager"
-        for cmd in "${missing_deps[@]}"; do
-            if [ -n "${yum_packages[$cmd]}" ]; then
-                # Handle cases where one command maps to multiple packages
-                to_install+=($yum_packages[$cmd])
-            fi
-        done
-        
-        if [ ${#to_install[@]} -gt 0 ]; then
-            log_info "Installing packages: ${to_install[*]}"
-            sudo yum install -y "${to_install[@]}"
-        fi
-        
-    else
-        log_warn "No supported package manager found (apt-get or yum)"
-        log_warn "Please install missing dependencies manually: ${missing_deps[*]}"
+    done
+
+    if [ ${#to_install[@]} -eq 0 ]; then
+        log_error "Internal error: no packages mapped for missing commands: ${missing_cmds[*]}"
         return 1
     fi
-    
+
+    log_info "Installing packages: ${to_install[*]}"
+
+    if [ "$pm" = "apt" ]; then
+        sudo apt-get update
+        sudo apt-get install -y "${to_install[@]}"
+    else
+        # Fedora best practice
+        sudo dnf install -y "${to_install[@]}"
+    fi
+
     # Verify installation succeeded
-    local still_missing=()
-    for cmd in "${missing_deps[@]}"; do
+    local -a still_missing=()
+    for cmd in "${missing_cmds[@]}"; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
             still_missing+=("$cmd")
         fi
     done
-    
+
     if [ ${#still_missing[@]} -gt 0 ]; then
-        log_error "Failed to install dependencies: ${still_missing[*]}"
+        log_error "Failed to install dependencies; still missing commands: ${still_missing[*]}"
+        log_error "You may be on a minimal/headless install or the packages are unavailable in your repos."
         return 1
     fi
-    
+
     log_info "All system dependencies are now available"
     return 0
 }
+
 
 # Check Docker availability
 ensure_docker() {
@@ -304,29 +332,34 @@ main() {
     
     # Check and ensure all dependencies are available
     local setup_failed=false
+    local docker_available=false
     
     if ! ensure_system_dependencies; then
         setup_failed=true
     fi
     
-    if ! ensure_docker; then
+    if ensure_docker; then
+        docker_available=true
+    else
         setup_failed=true
     fi
     
-    if ! ensure_verilator; then
-        setup_failed=true
-    fi
-    
-    if ! ensure_gtkwave; then
-        setup_failed=true
-    fi
+    if [ "$docker_available" = true ]; then
+        if ! ensure_verilator; then
+            setup_failed=true
+        fi
+        
+        if ! ensure_gtkwave; then
+            setup_failed=true
+        fi
 
-    if ! ensure_oss_cad; then
-        setup_failed=true
-    fi
+        if ! ensure_oss_cad; then
+            setup_failed=true
+        fi
 
-    if ! ensure_sv2v; then
-        setup_failed=true
+        if ! ensure_sv2v; then
+            setup_failed=true
+        fi
     fi
     
     if [ "$setup_failed" = true ]; then
