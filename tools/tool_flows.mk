@@ -52,12 +52,13 @@ YOSYS_DOCKER := docker run --rm -ti \
 	--user $(shell id -u):$(shell id -g) \
 	$(OSS_CAD_IMAGE) yosys
 
-# Auto-detect X11 environment (VNC vs WSLg)
-ifeq ($(shell test -S /tmp/.X11-unix/X$(patsubst :%,%,$(DISPLAY)) && echo wslg),wslg)
-    # WSL2/WSLg environment - traditional X11 socket
+# Auto-detect display environment (X11 socket vs networked/VNC)
+ifeq ($(shell test -S /tmp/.X11-unix/X$(patsubst :%,%,$(DISPLAY)) && echo has_x11_socket),has_x11_socket)
+    # X11 socket environment (e.g., WSL2/WSLg, native Linux with X11)
     GTKWAVES_DOCKER := docker run --rm -it \
         -v /tmp/.X11-unix:/tmp/.X11-unix \
-        -v /mnt/wslg:/mnt/wslg \
+        $(if $(wildcard /mnt/wslg),-v /mnt/wslg:/mnt/wslg) \
+        $(if $(WAYLAND_DISPLAY),-v $(XDG_RUNTIME_DIR):$(XDG_RUNTIME_DIR)) \
         -e DISPLAY -e WAYLAND_DISPLAY -e XDG_RUNTIME_DIR \
         -v "$(PROJECT_ROOT)":/work \
         -e HOME=$(CURRENT_DIR) \
@@ -65,7 +66,7 @@ ifeq ($(shell test -S /tmp/.X11-unix/X$(patsubst :%,%,$(DISPLAY)) && echo wslg),
         --user $(shell id -u):$(shell id -g) \
         $(GTK_WAVES_IMAGE) gtkwave
 else
-    # Dev container VNC environment
+    # Networked display environment (e.g., dev container VNC)
     GTKWAVES_DOCKER := docker run --rm -it \
         --network host \
         -e DISPLAY=$(DISPLAY) \
