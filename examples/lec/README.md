@@ -2,6 +2,12 @@
 
 This example demonstrates how to use EQY (Equivalence checking with Yosys) to verify that two different implementations of the same design are functionally equivalent.
 
+## Supported commands
+
+- `make lec` — Run equivalence checking
+- `make lec-waves` — Open generated EQY VCD traces in GTKWave
+- `make clean` — Remove generated artifacts
+
 ## Files
 
 - `counter_gold.v` - The "gold" reference implementation (known to be correct)
