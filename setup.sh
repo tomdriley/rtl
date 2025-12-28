@@ -316,6 +316,32 @@ ensure_sv2v() {
     fi
 }
 
+# Ensure OpenSTA Docker image is available and working
+ensure_opensta() {
+    log_info "Checking OpenSTA Docker image..."
+
+    # Check if image exists, build if necessary
+    if ! docker image inspect opensta:latest >/dev/null 2>&1; then
+        log_info "OpenSTA image not found, building..."
+        if ! docker build -t opensta -f tools/Dockerfile.opensta .; then
+            log_error "Failed to build OpenSTA Docker image"
+            return 1
+        fi
+    else
+        log_info "OpenSTA image already available"
+    fi
+
+    # Test OpenSTA with version check
+    log_info "Testing OpenSTA..."
+    if docker run --rm --entrypoint sta opensta -version >/dev/null 2>&1; then
+        log_info "OpenSTA is working correctly"
+        return 0
+    else
+        log_error "OpenSTA test failed"
+        return 1
+    fi
+}
+
 # Main setup logic
 main() {
     log_info "Starting RTL development environment setup..."
@@ -360,6 +386,10 @@ main() {
         if ! ensure_sv2v; then
             setup_failed=true
         fi
+
+        if ! ensure_opensta; then
+            setup_failed=true
+        fi
     fi
     
     if [ "$setup_failed" = true ]; then
@@ -376,6 +406,7 @@ main() {
     log_info "  • make formal - Run formal verification with OSS CAD SBY"
     log_info "  • make sv2v   - Convert SystemVerilog to Verilog using sv2v"
     log_info "  • make synth  - Synthesize designs with Yosys"
+    log_info "  • make sta    - Run static timing analysis with OpenSTA"
     log_info ""
     log_info "Example usage:"
     log_info "  cd examples/hello && make build && make run"
@@ -383,6 +414,7 @@ main() {
     log_info "  cd examples/formal && make formal"
     log_info "  cd examples/sv2v && make sv2v"
     log_info "  cd examples/synthesis && make synth"
+    log_info "  cd examples/synthesis && make pdk-sky130 && make sta STA_SCRIPT=sta.tcl"
 }
 
 # Run main function

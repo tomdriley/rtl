@@ -1,0 +1,76 @@
+# OpenSTA + CUDD Docker Image
+#
+# Builds OpenSTA (static timing analyzer) from source, including the required
+# CUDD dependency, and provides the `sta` executable.
+#
+# Notes:
+# - OpenSTA is built with CMake and requires CUDD.
+# - This image is intended for portable, containerized RTL/STA experiments.
+
+# --- Builder stage ---
+FROM ubuntu:22.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    ca-certificates wget curl git \
+    cmake gcc g++ make \
+    tcl-dev tcl-tclreadline \
+    libeigen3-dev \
+    swig bison flex \
+    libfl-dev \
+    automake autotools-dev \
+    zlib1g-dev \
+    libreadline-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt
+
+# Build and install CUDD (required by OpenSTA)
+ARG CUDD_VERSION=3.0.0
+RUN wget -q "https://raw.githubusercontent.com/davidkebo/cudd/main/cudd_versions/cudd-${CUDD_VERSION}.tar.gz" -O cudd.tgz \
+    && tar -xzf cudd.tgz \
+    && rm cudd.tgz \
+    && cd "cudd-${CUDD_VERSION}" \
+    && ./configure --prefix=/opt/cudd \
+    && make -j"$(nproc)" \
+    && make install
+
+# Build and install OpenSTA
+ARG OPENSTA_REPO=https://github.com/The-OpenROAD-Project/OpenSTA.git
+ARG OPENSTA_REF=master
+RUN git clone --depth 1 --branch "${OPENSTA_REF}" "${OPENSTA_REPO}" OpenSTA
+
+WORKDIR /opt/OpenSTA
+RUN mkdir -p build \
+    && cd build \
+    && cmake -DCUDD_DIR=/opt/cudd -DCMAKE_INSTALL_PREFIX=/opt/opensta .. \
+    && make -j"$(nproc)" \
+    && make install
+
+# --- Runtime stage ---
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Runtime dependencies for `sta`
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    tcl \
+    tcl8.6 \
+    tcl-tclreadline \
+    zlib1g \
+    libstdc++6 libc6 \
+    libreadline8 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /opt/opensta /opt/opensta
+COPY --from=builder /opt/cudd /opt/cudd
+
+ENV PATH="/opt/opensta/bin:${PATH}"
+ENV LD_LIBRARY_PATH=/opt/cudd/lib
+
+# Verify installation
+RUN sta -version
+
+CMD ["/bin/bash"]

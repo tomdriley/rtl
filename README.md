@@ -59,6 +59,19 @@ make cover  # Run cover analysis to find reachable states
 make waves  # View formal verification traces with intelligent selection
 ```
 
+### Static Timing Analysis (OpenSTA + Sky130)
+
+Fetch the Sky130 standard-cell Liberty files (cached under `rtl-toolkit/.pdk`) and run a small STA example:
+
+```bash
+cd examples/sta
+make pdk-sky130
+make sta
+cat scratch/sta.rpt
+```
+
+The timing constraints for this example live in `examples/sta/tiny.sdc`.
+
 ### Wave File Selection
 
 When multiple VCD traces are available from formal verification, the system provides flexible selection:
@@ -104,6 +117,10 @@ The setup script automatically detects your environment and installs only what's
 | `make waves-list` | List all available VCD trace files |
 | `make waves-cover` | Open cover traces specifically |
 | `make waves-bmc` | Open BMC traces (counterexamples) specifically |
+| `make sv2v` | Convert SystemVerilog to Verilog using sv2v |
+| `make synth` | Synthesize designs with Yosys |
+| `make pdk-sky130` | Fetch Sky130 standard-cell libs into a shared cache |
+| `make sta` | Run static timing analysis using OpenSTA |
 | `make clean` | Clean build artifacts and verification results |
 | `make rebuild` | Clean and rebuild |
 

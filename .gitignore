@@ -47,3 +47,6 @@ temp/
 tmp/
 scratch/
 build_*/
+
+# Downloaded PDK cache (created by `make pdk-sky130`)
+.pdk/

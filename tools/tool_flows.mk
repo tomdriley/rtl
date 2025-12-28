@@ -23,6 +23,16 @@ VERILATOR_INCLUDE_ARGS = $(addprefix -I, $(INCLUDE_DIRS))
 GTK_WAVES_IMAGE := gtk-wave:latest
 OSS_CAD_IMAGE := oss-cad:latest
 SV2V_IMAGE := sv2v:latest
+OPENSTA_IMAGE := opensta:latest
+
+# rtl-toolkit root (shared cache location across examples)
+RTL_TOOLKIT_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
+
+# PDK cache root on host (shared across examples)
+PDK_ROOT_HOST ?= $(RTL_TOOLKIT_ROOT)/.pdk
+
+# Only mount PDK if it exists (avoid Docker creating root-owned dirs)
+PDK_MOUNT := $(if $(wildcard $(PDK_ROOT_HOST)),-v "$(PDK_ROOT_HOST)":/pdk -e PDK_ROOT=/pdk,)
 
 # SBY Docker command
 SBY_DOCKER := docker run --rm -ti \
@@ -48,9 +58,21 @@ SV2V_DOCKER := docker run --rm -ti \
 # Yosys Docker command (for synthesis)
 YOSYS_DOCKER := docker run --rm -ti \
 	-v "$(PROJECT_ROOT)":/work \
+	$(PDK_MOUNT) \
 	-w $(CURRENT_DIR) \
 	--user $(shell id -u):$(shell id -g) \
 	$(OSS_CAD_IMAGE) yosys
+
+
+# OpenSTA Docker command
+# NOTE: use non-interactive execution + -exit so sta never drops to a Tcl prompt.
+OPENSTA_DOCKER := docker run --rm \
+	-v "$(PROJECT_ROOT)":/work \
+	$(PDK_MOUNT) \
+	-e HOME=$(CURRENT_DIR) \
+	-w $(CURRENT_DIR) \
+	--user $(shell id -u):$(shell id -g) \
+	$(OPENSTA_IMAGE) sta -no_splash -exit
 
 # Auto-detect display environment (X11 socket vs networked/VNC)
 ifeq ($(shell test -S /tmp/.X11-unix/X$(patsubst :%,%,$(DISPLAY)) && echo has_x11_socket),has_x11_socket)
@@ -80,7 +102,7 @@ endif
 
 
 # Common rules
-.PHONY: clean rebuild build run waves formal formal-cover formal-waves waves-list waves-cover waves-bmc lec lec-waves synth sv2v
+.PHONY: clean rebuild build run waves formal formal-cover formal-waves waves-list waves-cover waves-bmc lec lec-waves synth sv2v pdk-sky130 sta
 
 clean:
 	@# Clean Verilator artifacts
@@ -270,6 +292,53 @@ sv2v:
 				echo "Warning: Output file $$outf not found."; \
 			fi; \
 		done; \
+	fi
+
+# --- Sky130 PDK (prebuilt via ciel) ---
+# Fetches a prebuilt Sky130 PDK into the shared cache under rtl-toolkit/.pdk.
+# This is the smallest practical way to get real Liberty .lib files for OpenSTA.
+SKY130_PDK_FAMILY ?= sky130
+SKY130_PDK_VARIANT ?= sky130A
+SKY130_CIEL_VERSION ?=
+SKY130_HD_LIB_DIR_HOST ?= $(PDK_ROOT_HOST)/$(SKY130_PDK_VARIANT)/libs.ref/sky130_fd_sc_hd/lib
+
+pdk-sky130:
+	@mkdir -p "$(PDK_ROOT_HOST)"
+	@if ls "$(SKY130_HD_LIB_DIR_HOST)"/*.lib >/dev/null 2>&1; then \
+		echo "Sky130 PDK already present (found .lib under $(SKY130_HD_LIB_DIR_HOST))"; \
+	else \
+		echo "Fetching Sky130 PDK via ciel (this can take a while)..."; \
+		docker run --rm -t \
+			-v "$(PDK_ROOT_HOST)":/pdk \
+			-e HOME=/tmp \
+			$(OSS_CAD_IMAGE) bash -lc 'set -e; \
+				python3 -m pip install --break-system-packages --user -q ciel; \
+				CIEL=/tmp/.local/bin/ciel; \
+				VER="$(SKY130_CIEL_VERSION)"; \
+				if [ -z "$$VER" ]; then VER=$$($$CIEL ls-remote --pdk-family=$(SKY130_PDK_FAMILY) | head -n 1); fi; \
+				echo "Using ciel version: $$VER"; \
+				$$CIEL enable --pdk-root /pdk --pdk-family=$(SKY130_PDK_FAMILY) -l sky130_fd_sc_hd "$$VER"; \
+			'; \
+	fi
+
+# --- OpenSTA ---
+# Usage: make sta STA_SCRIPT=path/to/run.tcl
+# Optional: set STA_OUT=path/to/report.txt to capture stdout.
+sta:
+	@if [ -z "$(STA_SCRIPT)" ]; then \
+		echo "Error: STA_SCRIPT not set."; \
+		echo "Usage: make sta STA_SCRIPT=run.tcl"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(STA_SCRIPT)" ]; then \
+		echo "Error: STA_SCRIPT '$(STA_SCRIPT)' not found."; \
+		exit 1; \
+	fi
+	@if [ -n "$(STA_OUT)" ]; then \
+		$(OPENSTA_DOCKER) "$(STA_SCRIPT)" > "$(STA_OUT)"; \
+		echo "Wrote $(STA_OUT)"; \
+	else \
+		$(OPENSTA_DOCKER) "$(STA_SCRIPT)"; \
 	fi
 
 endif # TOOL_FLOWS_MK
